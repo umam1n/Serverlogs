@@ -182,7 +182,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'server_room_db',      # The name you chose in Step 2
         'USER': 'django_user',        # The user you created in Step 2
-        'PASSWORD': 'airaniio15',    # The password you set in Step 2
+        'PASSWORD': '**********',    # The password you set in Step 2
         'HOST': 'localhost',            # Or '127.0.0.1'
         'PORT': '5432',                 # Default PostgreSQL port
     }
