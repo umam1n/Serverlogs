@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block content %}
+<meta http-equiv="refresh" content="30">
+<div class="space-y-10">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">Pending Requests</h2>
+        <div class="bg-white shadow-lg rounded-lg p-6 space-y-6">
+            {% comment %} This is the corrected 'for' loop structure {% endcomment %}
+            {% for req in pending_requests %}
+                <div class="border rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between">
+                    <div class="flex-grow mb-4 md:mb-0">
+                        <p class="font-bold text-lg text-gray-800">{{ req.user.get_full_name }}</p>
+                        <p class="text-sm text-gray-600">
+                            Wants to access <span class="font-semibold">{{ req.location.name }}</span>
+                        </p>
+                        <p class="text-xs text-gray-400">
+                            Requested on {{ req.request_timestamp|date:"d M Y, H:i" }}
+                        </p>
+                        <div class="mt-2 text-sm bg-gray-50 p-2 rounded">
+                            <p><strong>Purpose:</strong> {{ req.notes }}</p>
+                        </div>
+                    </div>
+                    <div class="flex-shrink-0 flex space-x-2">
+                        <a href="{% url 'approve_request' req.id %}" class="px-4 py-2 bg-green-500 text-white text-sm font-bold rounded-lg hover:bg-green-600">Approve</a>
+                        <a href="{% url 'deny_request' req.id %}" class="px-4 py-2 bg-red-500 text-white text-sm font-bold rounded-lg hover:bg-red-600">Deny</a>
+                    </div>
+                </div>
+            {% empty %}
+                <p class="text-center text-gray-500 py-4">No pending requests.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">Log History</h2>
+        <div class="bg-white shadow-lg rounded-lg overflow-x-auto">
+            {% comment %} This is the corrected table structure {% endcomment %}
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="py-3 px-6 text-left">User</th>
+                        <th class="py-3 px-6 text-left">Site</th>
+                        <th class="py-3 px-6 text-left">Status</th>
+                        <th class="py-3 px-6 text-left">Date</th>
+                        <th class="py-3 px-6 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for log in log_history %}
+                    <tr>
+                        <td class="py-4 px-6 font-medium">{{ log.user.get_full_name }}</td>
+                        <td class="py-4 px-6 text-gray-500">{{ log.location.name }}</td>
+                        <td class="py-4 px-6">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                {% if log.status == 'Approved' %}bg-green-100 text-green-800{% elif log.status == 'Pending' %}bg-yellow-100 text-yellow-800{% elif log.status == 'Denied' %}bg-red-100 text-red-800{% elif log.status == 'Checked-In'%}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ log.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="py-4 px-6 text-gray-500">{{ log.request_timestamp|date:"d M Y, H:i" }}</td>
+                        <td class="px-6 py-4 text-center">
+                            <button type="button" class="text-blue-600 hover:underline">Detail</button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-gray-500">No logs found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="detailModal" class="hidden ...">
+    </div>
+{% endblock %}

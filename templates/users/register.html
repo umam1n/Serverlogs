@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-lg p-8 max-w-4xl mx-auto">
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Create New Account</h1>
+        <p class="mt-2 text-sm text-gray-600">Complete your details to proceed to face verification.</p>
+    </div>
+    <form method="post" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-x-12">
+        <div class="space-y-4">
+            {% csrf_token %}
+            {{ form|crispy }}
+        </div>
+        <div class="space-y-4 bg-gray-50 p-6 rounded-lg">
+            <h3 class="text-lg font-medium text-gray-800 border-b pb-2">Next Step: Face Verification</h3>
+            <p class="text-sm text-gray-600">After filling out your details, you will be directed to our automated face capture system.</p>
+            <ul class="list-disc list-inside text-sm text-gray-600 space-y-2 mt-2">
+                <li>Please ensure you are in a well-lit area.</li>
+                <li>Remove any hats or sunglasses.</li>
+                <li>You will be asked to look forward, left, and right.</li>
+            </ul>
+        </div>
+        <div class="md:col-span-2 text-center pt-6 border-t mt-6">
+            <button type="submit" class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg">
+                Continue to Face Enrollment
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

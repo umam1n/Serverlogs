@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-lg p-6 sm:p-8">
+    <div class="flex items-center justify-between pb-4 border-b mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">My Access History</h1>
+        <a href="{% url 'request_access' %}" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">
+            + New Request
+        </a>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full bg-white">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="py-3 px-6 text-left">Site</th>
+                    <th class="py-3 px-6 text-left">Date Requested</th>
+                    <th class="py-3 px-6 text-left">Status</th>
+                    <th class="py-3 px-6 text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for log in logs %}
+                <tr>
+                    <td class="py-4 px-6 font-medium">{{ log.location.name }}</td>
+                    <td class="py-4 px-6 text-gray-500">{{ log.request_timestamp|date:"d M Y, H:i" }}</td>
+                    <td class="py-4 px-6"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                        {% if log.status == 'Approved' %}bg-green-100 text-green-800{% elif log.status == 'Pending' %}bg-yellow-100 text-yellow-800{% elif log.status == 'Denied' %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                        {{ log.get_status_display }}
+                    </span></td>
+                    <td class="py-4 px-6">
+                        {% if log.status == 'Approved' %}
+                            <a href="{% url 'process_check_in' log.id %}" class="px-3 py-1 bg-blue-500 text-white text-xs font-bold rounded-full hover:bg-blue-600">Check In</a>
+                        {% elif log.status == 'Checked-In' %}
+                            <a href="{% url 'process_check_out' log.id %}" class="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full hover:bg-red-600">Check Out</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center py-4 text-gray-500">You have not made any requests.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

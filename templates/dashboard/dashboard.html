@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #map { height: 400px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="space-y-8">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-800">Analytics Dashboard</h1>
+        <p class="text-gray-500 mt-1">Real-time insights into server room access.</p>
+    </div>
+
+    <div class="bg-white p-4 rounded-lg shadow-md">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div>
+                <label for="site" class="block text-sm font-medium text-gray-700">Filter by Site</label>
+                <select name="site" id="site" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    <option value="">All Sites</option>
+                    {% for site in all_sites %}
+                        <option value="{{ site.id }}" {% if site.id|stringformat:"s" == site_filter %}selected{% endif %}>{{ site.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="status" class="block text-sm font-medium text-gray-700">Filter by Status</label>
+                <select name="status" id="status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    <option value="">All Statuses</option>
+                    <option value="Checked-In" {% if status_filter == 'Checked-In' %}selected{% endif %}>Inside Now</option>
+                    <option value="Completed" {% if status_filter == 'Completed' %}selected{% endif %}>Completed</option>
+                    <option value="Approved" {% if status_filter == 'Approved' %}selected{% endif %}>Approved</option>
+                    <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
+                    <option value="Denied" {% if status_filter == 'Denied' %}selected{% endif %}>Denied</option>
+                </select>
+            </div>
+            <div>
+                <label for="time_filter" class="block text-sm font-medium text-gray-700">Time Range</label>
+                <select name="time_filter" id="time_filter" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    <option value="all" {% if time_filter == 'all' %}selected{% endif %}>All Time</option>
+                    <option value="day" {% if time_filter == 'day' %}selected{% endif %}>Last 24 Hours</option>
+                    <option value="week" {% if time_filter == 'week' %}selected{% endif %}>Last 7 Days</option>
+                    <option value="month" {% if time_filter == 'month' %}selected{% endif %}>Last 30 Days</option>
+                </select>
+            </div>
+            <button type="submit" class="w-full md:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md">Apply Filters</button>
+        </form>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500">Total Logs (Filtered)</h3><p class="text-3xl font-bold">{{ all_logs_count }}</p></div>
+        <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500">Inside Now</h3><p class="text-3xl font-bold text-blue-600">{{ checked_in_count }}</p></div>
+        <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500">Completed</h3><p class="text-3xl font-bold text-green-600">{{ completed_count }}</p></div>
+        <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500">Denied</h3><p class="text-3xl font-bold text-red-600">{{ denied_count }}</p></div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
+            <h3 class="font-semibold text-lg text-gray-800 mb-4">Site Locations</h3>
+            <div id="map" class="rounded-lg z-0"></div>
+        </div>
+        <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+            <h3 class="font-semibold text-lg text-gray-800 mb-4">Visits by Site</h3>
+            <canvas id="siteChart"></canvas>
+        </div>
+    </div>
+    
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <h3 class="font-semibold text-lg text-gray-800 mb-4">Detailed Access Logs (Filtered)</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase">User</th>
+                        <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase">Site</th>
+                        <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase">Date Requested</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for log in all_logs %}
+                    <tr>
+                        <td class="py-4 px-6 text-sm font-medium text-gray-900">{{ log.user.get_full_name }}</td>
+                        <td class="py-4 px-6 text-sm text-gray-500">{{ log.location.name }}</td>
+                        <td class="py-4 px-6">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                {% if log.status == 'Approved' %}bg-green-100 text-green-800{% elif log.status == 'Pending' %}bg-yellow-100 text-yellow-800{% elif log.status == 'Denied' %}bg-red-100 text-red-800{% elif log.status == 'Checked-In'%}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ log.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="py-4 px-6 text-sm text-gray-500">{{ log.request_timestamp|date:"d M Y, H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center py-4 text-gray-500">No logs match your filters.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+{{ visits_by_site_data|json_script:"site-data" }}
+{{ sites_json|json_script:"sites-for-map" }}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Read the safe JSON data from the script tags
+        const siteData = JSON.parse(document.getElementById('site-data').textContent);
+        const sitesForMap = JSON.parse(document.getElementById('sites-for-map').textContent);
+
+        // Map Initialization
+        if (sitesForMap.length > 0) {
+            const map = L.map('map').setView([sitesForMap[0].lat, sitesForMap[0].lon], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(map);
+
+            sitesForMap.forEach(site => {
+                L.marker([site.lat, site.lon]).addTo(map)
+                    .bindPopup(`<b>${site.name}</b>`);
+            });
+        }
+
+        // Site Chart (Bar)
+        if (siteData.length > 0) {
+            const siteCtx = document.getElementById('siteChart').getContext('2d');
+            new Chart(siteCtx, {
+                type: 'bar',
+                data: {
+                    labels: siteData.map(item => item.location__name),
+                    datasets: [{
+                        label: 'Number of Visits',
+                        data: siteData.map(item => item.count),
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

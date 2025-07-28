@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Room Access</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+    {% block styles %}{% endblock %}
+</head>
+<div class="flex items-center px-4 py-2 rounded" style="background-image: url('https://dm0qx8t0i9gc9.cloudfront.net/thumbnails/video/H76iStXtql4bglp0l/videoblocks-2023_04_bandung_shot-10_1_hrtkntsfn_thumbnail-1080_01.png'); background-size: cover; background-position: center;">
+    <img src="https://cdn.brandfetch.io/idjtLBUGJd/theme/light/logo.svg?c=1bxid64Mup7aczewSAYMX&t=1748077074507" alt="PLN Logo" class="h-10 w-auto mr-3">
+    <a href="{% url 'site_list' %}" class="font-bold text-xl text-white drop-shadow-md">Server Room Access</a>
+</div>
+
+
+<nav class="bg-white shadow-md fixed top-0 left-0 right-0 z-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+            <div class="flex items-center">
+                <!-- Add the logo here -->
+                {% load static %}
+                <img src="https://cdn.brandfetch.io/idjtLBUGJd/theme/light/logo.svg?c=1bxid64Mup7aczewSAYMX&t=1748077074507" alt="PLN Logo" class="h-10 w-auto mr-3">
+                <a href="{% url 'site_list' %}" class="font-bold text-xl text-[#003366]">Server Room Access</a>
+            </div>
+            <div class="flex items-center space-x-4">
+                {% if user.is_authenticated %}
+                    {% if user.is_staff %}
+                        <a href="{% url 'manage_logs' %}" class="text-gray-600 hover:text-[#005b99] px-3 py-2 rounded-md text-sm font-medium">Approvals</a>
+                        <a href="{% url 'face_approval_queue' %}" class="text-gray-600 hover:text-[#005b99] px-3 py-2 rounded-md text-sm font-medium">Face Approvals</a>
+                    {% endif %}
+                    <a href="{% url 'dashboard' %}" class="text-gray-600 hover:text-[#005b99] px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+                    <a href="{% url 'site_list' %}" class="text-gray-600 hover:text-[#005b99] px-3 py-2 rounded-md text-sm font-medium">Sites</a>
+                    <a href="{% url 'access_history' %}" class="text-gray-600 hover:text-[#005b99] px-3 py-2 rounded-md text-sm font-medium">My Logs</a>
+                    
+                    <!-- User Dropdown Menu -->
+                    <div class="relative" id="user-menu-button">
+                        <button type="button" class="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <span class="sr-only">Open user menu</span>
+                            <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center font-bold text-gray-600">
+                                {{ request.user.first_name|first|upper }}
+                            </div>
+                        </button>
+                        <div id="user-menu" class="hidden origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5">
+                            <a href="{% url 'user_settings' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+                            <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-red-700 hover:bg-red-100">Logout</a>
+                        </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>
+
+    <main class="max-w-7xl mx-auto py-24 px-4 sm:px-6 lg:px-8">
+        {% if messages %}
+            {% for message in messages %}
+            <div class="mb-4 p-4 rounded-md {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}" role="alert">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+        
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block scripts %}{% endblock %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuButton = document.getElementById('user-menu-button');
+            const userMenu = document.getElementById('user-menu');
+
+            if (menuButton) {
+                menuButton.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                    userMenu.classList.toggle('hidden');
+                });
+            }
+
+            document.addEventListener('click', function(event) {
+                if (userMenu && !userMenu.classList.contains('hidden') && !menuButton.contains(event.target)) {
+                    userMenu.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block styles %}
+<style>
+    .tab-button.active { border-color: #4f46e5; background-color: #eef2ff; color: #4f46e5; }
+    .tab-content { display: none; }
+    .tab-content.active { display: grid; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white p-8 rounded-lg shadow-xl max-w-4xl mx-auto">
+    <header class="text-center border-b pb-4">
+        <h1 class="text-3xl font-bold text-gray-900">Access Request Form</h1>
+    </header>
+
+    <form id="activityForm" method="post" class="mt-8 space-y-8">
+        {% csrf_token %}
+
+        {{ form|crispy }}
+        
+        <fieldset class="border p-4 rounded-lg">
+            <legend class="text-lg font-semibold px-2 text-gray-800">Detailed Activities</legend>
+            <div id="activityTabs" class="flex flex-wrap gap-2 border-b mt-4 pb-2">
+                <button type="button" data-tab="fisik" class="tab-button active px-4 py-2 text-sm font-medium border-b-2 border-transparent rounded-t-md">Physical & Environment</button>
+                <button type="button" data-tab="hardware" class="tab-button px-4 py-2 text-sm font-medium border-b-2 border-transparent rounded-t-md">Hardware</button>
+                <button type="button" data-tab="instalasi" class="tab-button px-4 py-2 text-sm font-medium border-b-2 border-transparent rounded-t-md">Installation & Maintenance</button>
+                <button type="button" data-tab="keamanan" class="tab-button px-4 py-2 text-sm font-medium border-b-2 border-transparent rounded-t-md">Security & Other</button>
+            </div>
+            <div class="mt-4">
+                <div id="tab-fisik" class="tab-content active grid-cols-2 md:grid-cols-3 gap-4">
+                    <label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded" value="Check Temperature & Humidity"> <span class="ml-2 text-sm">Temperature & Humidity</span></label>
+                    <label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded" value="Check Cooling System (AC)"> <span class="ml-2 text-sm">Cooling System (AC)</span></label>
+                    <label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded" value="Check UPS & Power"> <span class="ml-2 text-sm">UPS & Power</span></label>
+                    <label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded" value="Check Cleanliness"> <span class="ml-2 text-sm">Cleanliness</span></label>
+                </div>
+                <div id="tab-hardware" class="tab-content grid-cols-2 md:grid-cols-3 gap-4">
+                    <label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded" value="Visual Server Inspection"> <span class="ml-2 text-sm">Server Inspection</span></label>
+                    <label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded" value="Network Device Inspection"> <span class="ml-2 text-sm">Network Device Inspection</span></label>
+                    <label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded" value="Storage/SAN Inspection"> <span class="ml-2 text-sm">Storage/SAN Inspection</span></label>
+                </div>
+                <div id="tab-instalasi" class="tab-content grid-cols-2 md:grid-cols-3 gap-4">
+                    <label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded" value="Install/Remove Hardware"> <span class="ml-2 text-sm">Install/Remove Hardware</span></label>
+                    <label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded" value="Replace/Upgrade Component"> <span class="ml-2 text-sm">Replace/Upgrade Component</span></label>
+                    <label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded" value="Cable Management"> <span class="ml-2 text-sm">Cable Management</span></label>
+                    <label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded" value="Physical Console Access"> <span class="ml-2 text-sm">Physical Console Access</span></label>
+                </div>
+                <div id="tab-keamanan" class="tab-content grid-cols-2 md:grid-cols-3 gap-4">
+                    <label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded" value="Security Verification"> <span class="ml-2 text-sm">Security Verification</span></label>
+                    <label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded" value="CCTV Check"> <span class="ml-2 text-sm">CCTV Check</span></label>
+                    <label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded" value="Accompany Third Party"> <span class="ml-2 text-sm">Accompany Third Party</span></label>
+                </div>
+            </div>
+            <input type="hidden" name="detailed_activities" id="detailed_activities">
+        </fieldset>
+        
+        <div class="text-center pt-6 border-t">
+            <button type="submit" class="w-1/2 bg-blue-600 text-white font-bold py-3 px-4 rounded-lg">
+                Submit for Approval
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Logic for Tab Switching
+    const activityTabs = document.getElementById('activityTabs');
+    const tabContents = document.querySelectorAll('.tab-content');
+    activityTabs.addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON') {
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            const tabId = e.target.dataset.tab;
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+                if (content.id === `tab-${tabId}`) {
+                    content.classList.add('active');
+                }
+            });
+        }
+    });
+
+    // Logic for Form Submission
+    const form = document.getElementById('activityForm');
+    const detailedActivitiesInput = document.getElementById('detailed_activities');
+    form.addEventListener('submit', (e) => {
+        // Collect all checked activities
+        const checkedActivities = [];
+        document.querySelectorAll('.tab-content input[type="checkbox"]:checked').forEach(cb => {
+            checkedActivities.push(cb.value);
+        });
+        
+        // Save the list as a JSON string in the hidden input
+        detailedActivitiesInput.value = JSON.stringify(checkedActivities);
+    });
+});
+</script>
+{% endblock %}

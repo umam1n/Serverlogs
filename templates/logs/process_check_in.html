@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-lg p-8 max-w-4xl mx-auto">
+    <div class="text-center">
+        <h1 class="text-3xl font-bold text-gray-900">Final Check-In Verification</h1>
+        <p id="instructionText" class="mt-2 text-gray-600">Hold still for automatic photo capture to verify your entry for <strong>{{ log.location.name }}</strong>.</p>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 mt-8 items-center">
+        <div class="relative w-full aspect-video bg-gray-900 rounded-lg overflow-hidden">
+            <video id="cameraFeed" class="w-full h-full object-cover" autoplay playsinline></video>
+            
+            <div id="capture-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 text-white text-3xl font-bold opacity-0 transition-opacity">
+                <p id="capture-prompt"></p>
+            </div>
+        </div>
+
+        <div class="space-y-4 mt-6 md:mt-0">
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h3 class="font-bold text-lg">Request Details:</h3>
+                <p><strong>Purpose:</strong> {{ log.notes }}</p>
+                <p><strong>Category:</strong> {{ log.category }}</p>
+            </div>
+            <form method="post" id="checkin-form">
+                {% csrf_token %}
+                {{ form|crispy }}
+                <button type="submit" id="submitBtn" disabled class="w-full mt-4 bg-gray-400 cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg">
+                    Complete Check-In
+                </button>
+            </form>
+        </div>
+    </div>
+    <canvas id="canvas" class="hidden"></canvas>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    const video = document.getElementById('cameraFeed');
+    const canvas = document.getElementById('canvas');
+    const instructionText = document.getElementById('instructionText');
+    const submitBtn = document.getElementById('submitBtn');
+    const form = document.getElementById('checkin-form');
+    const photoDataInput = document.getElementById('id_photo_data');
+    const overlay = document.getElementById('capture-overlay');
+    const prompt = document.getElementById('capture-prompt');
+
+    async function setupCamera() {
+        try {
+            video.srcObject = await navigator.mediaDevices.getUserMedia({ video: true });
+            runCaptureSequence();
+        } catch (err) {
+            console.error("Detailed Camera Error:", err);
+            instructionText.textContent = "Camera could not be accessed!";
+        }
+    }
+
+    function runCaptureSequence() {
+        let count = 3;
+        prompt.textContent = count;
+        overlay.style.opacity = 1;
+
+        const countdown = setInterval(() => {
+            count--;
+            if (count > 0) {
+                prompt.textContent = count;
+            } else {
+                clearInterval(countdown);
+                prompt.textContent = "Smile!";
+                
+                setTimeout(() => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+                    
+                    photoDataInput.value = canvas.toDataURL('image/jpeg', 0.9);
+                    
+                    prompt.textContent = "Captured!";
+                    video.srcObject.getTracks().forEach(track => track.stop());
+                    
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                    submitBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                    instructionText.textContent = "Photo captured. You can now complete your check-in.";
+
+                    setTimeout(() => { overlay.style.opacity = 0; }, 1000);
+
+                }, 500);
+            }
+        }, 1000);
+    }
+
+    window.addEventListener('load', setupCamera);
+</script>
+{% endblock %}

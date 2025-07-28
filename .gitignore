@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+
+# Django
+*.log
+db.sqlite3
+
+# Virtual Environment
+venv/
+
+# User-uploaded content (VERY IMPORTANT)
+media/
+face_db/
+face_db_pending/
+
+# Static files collected for deployment
+staticfiles/
+
+# Editor/IDE specific files
+.vscode/
+.idea/
+
+# Environment variables (if you add a .env file later)
+.env
