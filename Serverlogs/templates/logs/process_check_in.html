@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+
+{% if messages %}
+    <div class="max-w-4xl mx-auto mb-4">
+        {% for message in messages %}
+        <div class="p-4 rounded-md {% if message.tags == 'error' %}bg-red-100 text-red-700{% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-700{% else %}bg-green-100 text-green-700{% endif %}" role="alert">
+            <span class="font-medium">{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+{% endif %}
+<div class="bg-white rounded-lg shadow-lg p-8 max-w-4xl mx-auto">
+    <div class="text-center">
+        <h1 class="text-3xl font-bold text-gray-900">Final Check-In Verification</h1>
+        <p id="instructionText" class="mt-2 text-gray-600">Please wait while we verify your location...</p>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 mt-8 items-center">
+        <div class="relative w-full aspect-video bg-gray-900 rounded-lg overflow-hidden">
+            <video id="cameraFeed" class="w-full h-full object-cover" autoplay playsinline></video>
+            
+            <div id="capture-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 text-white text-3xl font-bold opacity-0 transition-opacity">
+                <p id="capture-prompt"></p>
+            </div>
+        </div>
+
+        <div class="space-y-4 mt-6 md:mt-0">
+            <div id="location-status" class="p-4 text-sm rounded-lg bg-yellow-100 text-yellow-800">
+                <span class="font-medium">Acquiring your location...</span> Please enable location services if prompted.
+            </div>
+
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h3 class="font-bold text-lg">Request Details:</h3>
+                <p><strong>Purpose:</strong> {{ log.notes }}</p>
+                <p><strong>Category:</strong> {{ log.category }}</p>
+            </div>
+
+            <form method="post" id="checkin-form">
+                {% csrf_token %}
+                <input type="hidden" name="photo_data" id="id_photo_data">
+                <input type="hidden" name="user_latitude" id="user_latitude">
+                <input type="hidden" name="user_longitude" id="user_longitude">
+                
+                {{ form|crispy }}
+                <button type="submit" id="submitBtn" disabled class="w-full mt-4 bg-gray-400 cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg">
+                    Complete Check-In
+                </button>
+            </form>
+        </div>
+    </div>
+    <canvas id="canvas" class="hidden"></canvas>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    const video = document.getElementById('cameraFeed');
+    const canvas = document.getElementById('canvas');
+    const instructionText = document.getElementById('instructionText');
+    const submitBtn = document.getElementById('submitBtn');
+    const form = document.getElementById('checkin-form');
+    const photoDataInput = document.getElementById('id_photo_data');
+    const overlay = document.getElementById('capture-overlay');
+    const promptText = document.getElementById('capture-prompt');
+    
+    const locationStatus = document.getElementById('location-status');
+    const latInput = document.getElementById('user_latitude');
+    const lonInput = document.getElementById('user_longitude');
+
+    async function setupCamera() {
+        try {
+            instructionText.textContent = "Hold still for automatic photo capture...";
+            video.srcObject = await navigator.mediaDevices.getUserMedia({ video: true });
+            runCaptureSequence();
+        } catch (err) {
+            console.error("Detailed Camera Error:", err);
+            instructionText.textContent = "Error: Camera could not be accessed! Please grant permission.";
+        }
+    }
+
+    function runCaptureSequence() {
+        let count = 3;
+        promptText.textContent = count;
+        overlay.style.opacity = 1;
+
+        const countdown = setInterval(() => {
+            count--;
+            if (count > 0) {
+                promptText.textContent = count;
+            } else {
+                clearInterval(countdown);
+                promptText.textContent = "Smile!";
+                
+                setTimeout(() => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+                    
+                    photoDataInput.value = canvas.toDataURL('image/jpeg', 0.9);
+                    
+                    promptText.textContent = "Captured!";
+                    video.srcObject.getTracks().forEach(track => track.stop());
+                    
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                    submitBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                    instructionText.textContent = "Photo captured. You can now complete your check-in.";
+
+                    setTimeout(() => { overlay.style.opacity = 0; }, 1000);
+
+                }, 500);
+            }
+        }, 1000);
+    }
+
+    function getLocation() {
+        if (!navigator.geolocation) {
+            locationStatus.innerHTML = '<span class="font-medium">Error:</span> Geolocation is not supported by your browser.';
+            locationStatus.className = 'p-4 text-sm rounded-lg bg-red-100 text-red-800';
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                latInput.value = latitude;
+                lonInput.value = longitude;
+                locationStatus.innerHTML = '<span class="font-medium">Location Acquired!</span> Starting camera...';
+                locationStatus.className = 'p-4 text-sm rounded-lg bg-green-100 text-green-800';
+                
+                setupCamera();
+            },
+            (error) => {
+                let message = "Could not get your location. Please enable location services and refresh.";
+                if (error.code === error.PERMISSION_DENIED) {
+                    message = "Location access was denied. You must allow location access to check in.";
+                }
+                locationStatus.innerHTML = `<span class="font-medium">Error:</span> ${message}`;
+                locationStatus.className = 'p-4 text-sm rounded-lg bg-red-100 text-red-800';
+                instructionText.textContent = "Check-in failed. Location access is required.";
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+    }
+
+    window.addEventListener('load', getLocation);
+</script>
+{% endblock %}

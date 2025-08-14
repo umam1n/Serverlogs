@@ -1,0 +1,21 @@
+django
+<<<<<<< HEAD
+=======
+gunicorn
+>>>>>>> e868661 (Final project version with Docker setup)
+psycopg2-binary
+pillow
+django-crispy-forms
+crispy-tailwind
+requests
+django-jazzmin
+<<<<<<< HEAD
+django_apscheduler
+python-decouple
+dj-database-url
+django-apscheduler
+=======
+django-apscheduler
+python-decouple
+dj-database-url
+>>>>>>> e868661 (Final project version with Docker setup)

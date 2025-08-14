@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #map { height: 400px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-800">Analytics Dashboard</h1>
+        <p class="text-gray-500 mt-1">Real-time insights into server room access.</p>
+    </div>
+
+    <div class="bg-white p-4 rounded-lg shadow-md">
+        <form method="get" id="filter-form" class="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+            <div class="md:col-span-2">
+                <label for="user_search" class="block text-sm font-medium text-gray-700">Search by User</label>
+                <input type="text" name="user_search" id="user_search" value="{{ user_search }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" placeholder="Enter name or username...">
+            </div>
+            <div>
+                <label for="site" class="block text-sm font-medium text-gray-700">Filter by Site</label>
+                <select name="site" id="site" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    <option value="">All Sites</option>
+                    {% for site in all_sites %}
+                        <option value="{{ site.id }}" {% if site.id|stringformat:"s" == site_filter %}selected{% endif %}>{{ site.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="category" class="block text-sm font-medium text-gray-700">Filter by Category</label>
+                <select name="category" id="category" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    <option value="">All Categories</option>
+                    {% for cat in all_categories %}
+                        <option value="{{ cat.id }}" {% if cat.id|stringformat:"s" == category_filter %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="status" class="block text-sm font-medium text-gray-700">Filter by Status</label>
+                <select name="status" id="status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    <option value="">All Statuses</option>
+                    <option value="Checked-In" {% if status_filter == 'Checked-In' %}selected{% endif %}>Inside Now</option>
+                    <option value="Completed" {% if status_filter == 'Completed' %}selected{% endif %}>Completed</option>
+                    <option value="Approved" {% if status_filter == 'Approved' %}selected{% endif %}>Approved</option>
+                    <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
+                    <option value="Denied" {% if status_filter == 'Denied' %}selected{% endif %}>Denied</option>
+                </select>
+            </div>
+            <button type="submit" class="w-full md:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md">Apply Filters</button>
+        </form>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500">Total Logs (Filtered)</h3><p class="text-3xl font-bold">{{ all_logs_count }}</p></div>
+        <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500">Inside Now</h3><p class="text-3xl font-bold text-blue-600">{{ checked_in_count }}</p></div>
+        <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500">Completed</h3><p class="text-3xl font-bold text-green-600">{{ completed_count }}</p></div>
+        <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500">Denied</h3><p class="text-3xl font-bold text-red-600">{{ denied_count }}</p></div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
+            <h3 class="font-semibold text-lg text-gray-800 mb-4">Site Locations</h3>
+            <div id="map" class="rounded-lg z-0"></div>
+        </div>
+        <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+            <h3 class="font-semibold text-lg text-gray-800 mb-4">Visits by Site</h3>
+            <canvas id="siteChart"></canvas>
+        </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <h3 class="font-semibold text-lg text-gray-800 mb-4">Detailed Access Logs (Filtered)</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="py-3 px-6 text-left">User</th>
+                        <th class="py-3 px-6 text-left">Site</th>
+                        <th class="py-3 px-6 text-left">Status</th>
+                        <th class="py-3 px-6 text-left">Date Requested</th>
+                        <th class="py-3 px-6 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for log in all_logs %}
+                    <tr id="log-row-{{ log.id }}">
+                        <td class="py-4 px-6">{{ log.user.get_full_name }}</td>
+                        <td class="py-4 px-6">{{ log.location.name }}</td>
+                        <td class="py-4 px-6">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                {% if log.status == 'Completed' %} bg-green-100 text-green-800
+                                {% elif log.status == 'Checked-In' %} bg-blue-100 text-blue-800
+                                {% elif log.status == 'Approved' %} bg-teal-100 text-teal-800
+                                {% elif log.status == 'Denied' %} bg-red-100 text-red-800
+                                {% else %} bg-yellow-100 text-yellow-800 {% endif %}">
+                                {{ log.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="py-4 px-6">{{ log.request_timestamp|date:"d M Y, H:i" }}</td>
+                        <td class="px-6 py-4 text-center">
+                            <button type="button" data-target="details-{{ log.id }}" class="text-blue-600 hover:underline text-sm details-toggle-btn">
+                                Details
+                            </button>
+                        </td>
+                    </tr>
+                    <tr id="details-{{ log.id }}" class="hidden bg-gray-50">
+                        <td colspan="5" class="p-4">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                            <div class="md:col-span-1">
+                                {% if log.entry_photo %}
+                                    <h4 class="font-bold text-gray-700 mb-2">Entry Photo:</h4>
+                                    <img src="{{ log.entry_photo.url }}" alt="Check-in photo for {{ log.user.get_full_name }}" class="rounded-lg shadow-md w-full max-w-xs">
+                                {% endif %}
+                            </div>
+                            <div class="md:col-span-2 space-y-4">
+                                <div>
+                                    <h4 class="font-bold text-gray-700">Timestamps:</h4>
+                                    <p><strong>Check-In:</strong> {{ log.entry_timestamp|date:"d M Y, H:i"|default:"N/A" }}</p>
+                                    <p><strong>Check-Out:</strong> {{ log.exit_timestamp|date:"d M Y, H:i"|default:"N/A" }}</p>
+                                    <p><strong>Approved by:</strong> {{ log.approved_by.get_full_name|default:"N/A" }}</p>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-gray-700">Activities & Outcome:</h4>
+                                    <p><strong>Purpose:</strong> {{ log.notes }}</p>
+                                    {% if log.detailed_activities %}
+                                        <p><strong>Selected Activities:</strong> {{ log.detailed_activities|join:", " }}</p>
+                                    {% endif %}
+                                    <p><strong>Outcome:</strong> {{ log.get_outcome_display|default:"N/A" }}</p>
+                                </div>
+                            </div>
+                            {% if log.activity_report %}
+                            <div class="md:col-span-3 mt-4">
+                                <h4 class="font-bold text-gray-700">Activity Report:</h4>
+                                <p class="whitespace-pre-wrap p-2 bg-white border rounded-md">{{ log.activity_report }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center py-4 text-gray-500">No logs match your filters.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+{{ visits_by_site_data|json_script:"site-data" }}
+{{ visits_by_category_data|json_script:"category-data" }}
+{{ sites_json|json_script:"sites-for-map" }}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // ... (Map and Chart initialization code remains the same) ...
+        const siteData = JSON.parse(document.getElementById('site-data').textContent);
+        const sitesForMap = JSON.parse(document.getElementById('sites-for-map').textContent);
+        
+        let mapCenter = [-6.9175, 107.6191];
+        if (sitesForMap.length > 0 && sitesForMap[0].lat && sitesForMap[0].lon) {
+            mapCenter = [sitesForMap[0].lat, sitesForMap[0].lon];
+        }
+
+        const map = L.map('map').setView(mapCenter, 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
+
+        sitesForMap.forEach(site => {
+            if (site.lat && site.lon) {
+                L.marker([site.lat, site.lon]).addTo(map).bindPopup(`<b>${site.name}</b>`);
+            }
+        });
+
+        if (siteData.length > 0) {
+            const siteCtx = document.getElementById('siteChart').getContext('2d');
+            new Chart(siteCtx, {
+                type: 'bar',
+                data: {
+                    labels: siteData.map(item => item.location__name),
+                    datasets: [{
+                        label: 'Number of Visits',
+                        data: siteData.map(item => item.count),
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: { scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+            });
+        }
+        
+        // --- CORRECTED JAVASCRIPT FOR DETAILS DROPDOWN ---
+        const detailButtons = document.querySelectorAll('.details-toggle-btn');
+        detailButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetId = button.dataset.target; // Use dataset.target
+                const targetRow = document.getElementById(targetId);
+                
+                if (targetRow) {
+                    const isHidden = targetRow.classList.contains('hidden');
+                    targetRow.classList.toggle('hidden');
+                    button.textContent = isHidden ? 'Hide' : 'Details';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,11 @@
+django
+psycopg2-binary
+pillow
+django-crispy-forms
+crispy-tailwind
+requests
+django-jazzmin
+django_apscheduler
+python-decouple
+dj-database-url
+django-apscheduler

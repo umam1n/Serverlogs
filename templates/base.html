@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Room Access</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+    {% block styles %}{% endblock %}
+</head>
+<body class="bg-gray-100">
+
+<nav class="bg-white shadow-md fixed top-0 left-0 right-0 z-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+            <div class="flex-shrink-0">
+                <div class="hidden md:flex items-center">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/0/05/Danantara_Indonesia.svg" alt="Danantara Logo" class="h-8 w-auto">
+                    <div class="border-l border-gray-300 h-8 mx-3"></div>
+                    <img src="https://cdn.brandfetch.io/idjtLBUGJd/theme/light/logo.svg?c=1bxid64Mup7aczewSAYMX&t=1748077074507" alt="PLN Logo" class="h-10 w-auto">
+                    <a href="{% url 'site_list' %}" class="font-bold text-xl text-[#003366] ml-4">Server Access</a>
+                </div>
+                <div class="md:hidden flex items-center">
+                    <img src="https://cdn.brandfetch.io/idjtLBUGJd/theme/light/logo.svg?c=1bxid64Mup7aczewSAYMX&t=1748077074507" alt="PLN Logo" class="h-10 w-auto">
+                    <a href="{% url 'site_list' %}" class="font-bold text-lg text-[#003366] ml-2">Server Access</a>
+                </div>
+            </div>
+
+            <div class="hidden md:flex items-center space-x-4">
+                {% if user.is_authenticated %}
+                    {% if user.is_staff %}
+                        <a href="{% url 'manage_logs' %}" class="text-gray-600 hover:text-[#005b99] px-3 py-2 rounded-md text-sm font-medium">Approvals</a>
+                        <a href="{% url 'face_approval_queue' %}" class="text-gray-600 hover:text-[#005b99] px-3 py-2 rounded-md text-sm font-medium">Face Approvals</a>
+                        <a href="{% url 'dashboard' %}" class="text-gray-600 hover:text-[#005b99] px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+                    {% endif %}
+                    <a href="{% url 'site_list' %}" class="text-gray-600 hover:text-[#005b99] px-3 py-2 rounded-md text-sm font-medium">Sites</a>
+                    <a href="{% url 'access_history' %}" class="text-gray-600 hover:text-[#005b99] px-3 py-2 rounded-md text-sm font-medium">My Logs</a>
+                    
+                    <div class="relative" id="user-menu-button">
+                        <button type="button" class="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <span class="sr-only">Open user menu</span>
+                            <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center font-bold text-gray-600">
+                                {{ request.user.first_name|first|upper }}
+                            </div>
+                        </button>
+                        <div id="user-menu" class="hidden origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5">
+                            <a href="{% url 'user_settings' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+                            <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-red-700 hover:bg-red-100">Logout</a>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="md:hidden flex items-center">
+                <button id="mobile-menu-button" type="button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-800 hover:bg-gray-100 focus:outline-none">
+                    <span class="sr-only">Open main menu</span>
+                    <svg id="hamburger-open" class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                    <svg id="hamburger-close" class="h-6 w-6 hidden" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="mobile-menu" class="hidden md:hidden">
+        <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-b">
+            {% if user.is_authenticated %}
+                {% if user.is_staff %}
+                    <a href="{% url 'manage_logs' %}" class="block text-gray-800 hover:bg-gray-100 px-3 py-2 rounded-md text-base font-medium">Approvals</a>
+                    <a href="{% url 'face_approval_queue' %}" class="block text-gray-800 hover:bg-gray-100 px-3 py-2 rounded-md text-base font-medium">Face Approvals</a>
+                    <a href="{% url 'dashboard' %}" class="block text-gray-800 hover:bg-gray-100 px-3 py-2 rounded-md text-base font-medium">Dashboard</a>
+                {% endif %}
+                <a href="{% url 'site_list' %}" class="block text-gray-800 hover:bg-gray-100 px-3 py-2 rounded-md text-base font-medium">Sites</a>
+                <a href="{% url 'access_history' %}" class="block text-gray-800 hover:bg-gray-100 px-3 py-2 rounded-md text-base font-medium">My Logs</a>
+                <a href="{% url 'user_settings' %}" class="block text-gray-800 hover:bg-gray-100 px-3 py-2 rounded-md text-base font-medium">Profile</a>
+                <a href="{% url 'logout' %}" class="block text-red-700 hover:bg-red-100 px-3 py-2 rounded-md text-base font-medium">Logout</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<main class="max-w-7xl mx-auto py-24 px-4 sm:px-6 lg:px-8">
+    {% if messages %}
+        {% for message in messages %}
+        <div class="mb-4 p-4 rounded-md {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}" role="alert">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    
+    {% block content %}{% endblock %}
+</main>
+
+{% block scripts %}{% endblock %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Desktop User Dropdown Logic
+        const menuButton = document.getElementById('user-menu-button');
+        const userMenu = document.getElementById('user-menu');
+        if (menuButton) {
+            menuButton.addEventListener('click', function(event) {
+                event.stopPropagation();
+                userMenu.classList.toggle('hidden');
+            });
+        }
+        document.addEventListener('click', function(event) {
+            if (userMenu && !userMenu.classList.contains('hidden') && !menuButton.contains(event.target)) {
+                userMenu.classList.add('hidden');
+            }
+        });
+
+        // Mobile Hamburger Menu Logic
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const openIcon = document.getElementById('hamburger-open');
+        const closeIcon = document.getElementById('hamburger-close');
+        if (mobileMenuButton) {
+            mobileMenuButton.addEventListener('click', function() {
+                mobileMenu.classList.toggle('hidden');
+                openIcon.classList.toggle('hidden');
+                closeIcon.classList.toggle('hidden');
+            });
+        }
+    });
+</script>
+
+{% if user.is_authenticated %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Set timeout duration in milliseconds (e.g., 15 minutes = 900 * 1000)
+        const timeoutDuration = 900 * 1000; 
+        let warningTimer;
+        let logoutTimer;
+
+        const logoutUser = () => {
+            window.location.href = "{% url 'logout' %}?next={% url 'login' %}";
+        };
+
+        const showWarning = () => {
+            alert("You have been inactive for a while. You will be logged out in 1 minute.");
+        };
+
+        const resetTimers = () => {
+            clearTimeout(warningTimer);
+            clearTimeout(logoutTimer);
+            warningTimer = setTimeout(showWarning, timeoutDuration - 60000); 
+            logoutTimer = setTimeout(logoutUser, timeoutDuration);
+        };
+
+        const activityEvents = ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'];
+        activityEvents.forEach(event => document.addEventListener(event, resetTimers, true));
+        resetTimers();
+    });
+</script>
+{% endif %}
+</body>
+</html>

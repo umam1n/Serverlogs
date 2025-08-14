@@ -1,0 +1,59 @@
+# FILE: docker-compose.yml
+
+services:
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    command: gunicorn access_control.wsgi:application --bind 0.0.0.0:8000
+    volumes:
+      - .:/app:z
+    # REMOVE the ports section from here. Nginx will handle traffic.
+    # ports:
+    #   - "8000:8000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=${DEBUG}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - DATABASE_URL=${DATABASE_URL}
+      - FACE_API_KEY=${FACE_API_KEY}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  faceservice:
+    build:
+      context: .
+      dockerfile: Dockerfile.fastapi
+    ports:
+      - "8001:8001"
+    environment:
+      - FACE_API_KEY=${FACE_API_KEY}
+  
+  # --- ADD THIS NGINX SERVICE ---
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8000:80" # Map host port 8000 to Nginx's port 80
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - .:/app:z # Share the volume to access static/media files
+    depends_on:
+      - web
+
+volumes:
+  postgres_data:

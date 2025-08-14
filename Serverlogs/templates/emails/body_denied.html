@@ -1,0 +1,8 @@
+<h3>Hi {{ log.user.get_full_name }},</h3>
+<p>Your access request for <strong>{{ log.location.name }}</strong> on <strong>{{ log.scheduled_for_date }}</strong> has been denied by {{ log.approved_by.get_full_name }}.</p>
+<p>Please re-check to sites PIC to request further details.</p>
+
+
+<h3>halo {{ log.user.get_full_name }},</h3>
+<p>Akses yang diminta di <strong>{{ log.location.name }}</strong> pada <strong>{{ log.scheduled_for_date }}</strong> telah ditolak oleh {{ log.approved_by.get_full_name }}.</p>
+<p>Anda bisa untuk check ke PIC lokasi untuk detail lebih lanjut.</p>

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-lg p-8 max-w-4xl mx-auto">
+    <div class="text-center">
+        <h1 class="text-3xl font-bold text-gray-900">Face Verification</h1>
+        <p id="instructionText" class="mt-2 text-gray-600">Position your face in the frame and follow the instructions.</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 mt-8">
+        <div class="relative w-full aspect-video bg-gray-900 rounded-lg overflow-hidden">
+            <video id="cameraFeed" class="w-full h-full object-cover" autoplay playsinline></video>
+            <div id="cameraOverlay" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-4 border-white border-opacity-70 rounded-full w-3/4 h-5/6 shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]"></div>
+        </div>
+        <div class="space-y-4 flex flex-col justify-center items-center">
+            <p class="font-medium text-gray-700">Photo Previews:</p>
+            <div class="flex justify-around items-center w-full">
+                <img id="preview1" class="w-24 h-24 rounded-full border-2 border-gray-300 object-cover bg-gray-100" alt="Forward">
+                <img id="preview2" class="w-24 h-24 rounded-full border-2 border-gray-300 object-cover bg-gray-100" alt="Left">
+                <img id="preview3" class="w-24 h-24 rounded-full border-2 border-gray-300 object-cover bg-gray-100" alt="Right">
+            </div>
+            <button id="startCaptureBtn" type="button" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg">
+                Start Capture
+            </button>
+        </div>
+    </div>
+    <form id="enroll-form" method="post" class="hidden">
+        {% csrf_token %}
+        <input type="hidden" name="photo_front" id="photo_front">
+        <input type="hidden" name="photo_left" id="photo_left">
+        <input type="hidden" name="photo_right" id="photo_right">
+    </form>
+    <canvas id="canvas" class="hidden"></canvas>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const video = document.getElementById('cameraFeed');
+    const canvas = document.getElementById('canvas');
+    const instructionText = document.getElementById('instructionText');
+    const startCaptureBtn = document.getElementById('startCaptureBtn');
+    const enrollForm = document.getElementById('enroll-form');
+    const previews = [document.getElementById('preview1'), document.getElementById('preview2'), document.getElementById('preview3')];
+    const photoInputs = [document.getElementById('photo_front'), document.getElementById('photo_left'), document.getElementById('photo_right')];
+
+    async function setupCamera() {
+        try {
+            video.srcObject = await navigator.mediaDevices.getUserMedia({ video: true });
+        } catch (err) {
+            instructionText.textContent = "Camera could not be accessed!";
+            startCaptureBtn.disabled = true;
+        }
+    }
+
+    function captureImage(index) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/png');
+        previews[index].src = dataUrl;
+        photoInputs[index].value = dataUrl;
+    }
+
+    startCaptureBtn.addEventListener('click', async () => {
+        startCaptureBtn.disabled = true;
+        const steps = [
+            { instruction: "Look FORWARD...", duration: 3000 },
+            { instruction: "Now, turn slightly LEFT...", duration: 3000 },
+            { instruction: "Finally, turn slightly RIGHT...", duration: 3000 }
+        ];
+
+        for (let i = 0; i < steps.length; i++) {
+            instructionText.textContent = steps[i].instruction;
+            await new Promise(resolve => setTimeout(resolve, steps[i].duration));
+            captureImage(i);
+            previews[i].classList.add('border-green-500'); // Show success
+        }
+
+        instructionText.textContent = "Capture complete! Submitting...";
+        enrollForm.submit();
+    });
+
+    window.addEventListener('load', setupCamera);
+</script>
+{% endblock %}

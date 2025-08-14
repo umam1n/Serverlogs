@@ -1,0 +1,26 @@
+# FILE: Dockerfile.fastapi
+
+# Use an official Python runtime as a parent image
+FROM python:3.10-bullseye
+
+RUN apt-get update && apt-get install -y libgl1-mesa-glx libglib2.0-0
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Set the working directory in the container
+WORKDIR /app_face
+
+# Install dependencies
+COPY requirements-face.txt /app_face/
+RUN pip install --no-cache-dir -r requirements-face.txt
+
+# Copy the face service code into the container
+COPY ./face_recognition /app_face/
+
+# Expose the port Uvicorn will run on
+EXPOSE 8001
+
+# Command to run the application
+CMD ["uvicorn", "service:app", "--host", "0.0.0.0", "--port", "8001"]

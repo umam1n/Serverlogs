@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: sans-serif; }
+        .container { padding: 20px; border: 1px solid #ddd; border-radius: 5px; max-width: 600px; }
+        h3, h4 { color: #333; }
+        hr { border: 0; border-top: 1px solid #eee; }
+        .button { background-color: #0d6efd; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; display: inline-block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h3>Hi {{ log.location.pic.get_full_name }},</h3>
+        <p>A new access request has been submitted for a site you manage, <strong>{{ log.location.name }}</strong>.</p>
+        
+        <hr>
+        
+        <h4>Request Details:</h4>
+        <ul>
+            <li><strong>User:</strong> {{ log.user.get_full_name }} ({{ log.user.department|default:'N/A' }})</li>
+            <li><strong>Scheduled For:</strong> {{ log.scheduled_for_date|date:"l, d F Y" }}</li>
+            <li><strong>Purpose:</strong> {{ log.notes|linebreaksbr }}</li>
+            {% if log.group_members %}
+                <li><strong>Group Members:</strong> {{ log.group_members|linebreaksbr }}</li>
+            {% endif %}
+        </ul>
+        
+        <hr>
+        
+        <p>Please review this request at your earliest convenience. You can approve or deny it by clicking the link below:</p>
+        <p style="text-align: center; margin-top: 20px;">
+            <a href="{{ manage_url }}" class="button">
+                Go to Approval Dashboard
+            </a>
+        </p>
+        <br>
+        <p>Thank you,</p>
+        <p><em>Server Room Access System</em></p>
+    </div>
+    <div class="container">
+        <h3>Halo {{ log.location.pic.get_full_name }},</h3>
+        <p>Ada request akses di server yang anda kelola, <strong>{{ log.location.name }}</strong>.</p>
+        
+        <hr>
+        
+        <h4>Request Detail:</h4>
+        <ul>
+            <li><strong>User:</strong> {{ log.user.get_full_name }} ({{ log.user.department|default:'N/A' }})</li>
+            <li><strong>dijadwalkan untuk:</strong> {{ log.scheduled_for_date|date:"l, d F Y" }}</li>
+            <li><strong>tujuan:</strong> {{ log.notes|linebreaksbr }}</li>
+            {% if log.group_members %}
+                <li><strong>Anggota:</strong> {{ log.group_members|linebreaksbr }}</li>
+            {% endif %}
+        </ul>
+        
+        <hr>
+        
+        <p>Harap review request ini sesegera mungkin. Anda bisa menyetujui ataupun menolak lewat link berikut:</p>
+        <p style="text-align: center; margin-top: 20px;">
+            <a href="{{ manage_url }}" class="button">
+                Pergi ke Dashboard Approval
+            </a>
+        </p>
+        <br>
+        <p>Terima Kasih,</p>
+        <p><em>Server Room Access System</em></p>
+    </div>
+</body>
+</html>
