@@ -10,12 +10,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # --- CORE SETTINGS (from .env file) ---
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
-<<<<<<< HEAD
-ALLOWED_HOSTS = [] # In production, change to ['yourdomain.com']
-=======
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=Csv())
 CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://127.0.0.1:8000']
->>>>>>> e868661 (Final project version with Docker setup)
 
 # --- INSTALLED APPS ---
 INSTALLED_APPS = [
