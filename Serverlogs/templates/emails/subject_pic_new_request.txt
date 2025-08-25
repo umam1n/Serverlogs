@@ -1,1 +1,0 @@
-[Access Request] New Entry Request for {{ log.location.name }}

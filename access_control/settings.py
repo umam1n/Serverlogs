@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'sites',
     'logs',
     'dashboard',
+    'configuration'
 ]
 
 MIDDLEWARE = [

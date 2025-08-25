@@ -1,25 +1,25 @@
 # users/views.py
 import os
 import shutil
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import AuthenticationForm 
-from .forms import CustomUserCreationForm, UserProfileUpdateForm
-from .models import CustomUser, UserChangeLog, FaceChangeRequest # Make sure both are imported
-import requests
-from django.conf import settings
-import base64
-from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.forms import AuthenticationForm
 from django.core.files.base import ContentFile
+from django.conf import settings
+import requests
+import base64
 
+from .forms import CustomUserCreationForm, UserProfileUpdateForm
+from .models import CustomUser, UserChangeLog, FaceChangeRequest
+from configuration.models import SiteSettings
 def app_view(request):
     return render(request, 'app.html')
 
 def register(request):
     if request.method == 'POST':
-        form = CustomUserCreationForm(request.POST)
+        form = CustomUserCreationForm(request.POST, request.FILES)
         if form.is_valid():
             user = form.save()
             login(request, user)
@@ -31,7 +31,6 @@ def register(request):
 
 def user_login(request):
     if request.method == 'POST':
-        # Use the standard AuthenticationForm
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
             username = form.cleaned_data.get('username')
@@ -43,7 +42,6 @@ def user_login(request):
             else:
                 messages.error(request, 'Invalid username or password.')
     else:
-        # And use it here as well
         form = AuthenticationForm()
     return render(request, 'users/login.html', {'form': form})
 
@@ -57,6 +55,13 @@ def user_logout(request):
 
 @login_required
 def face_enroll(request):
+    settings_obj = SiteSettings.objects.first()
+    camera_enabled = settings_obj.camera_verification_enabled if settings_obj else True
+
+    if not camera_enabled:
+        messages.warning(request, "Face enrollment is temporarily disabled by an administrator.")
+        return render(request, 'users/face_enroll.html', {'camera_disabled': True})
+    
     if request.method == 'POST':
         photo_front_data = request.POST.get('photo_front', '')
         photo_left_data = request.POST.get('photo_left', '')
@@ -67,35 +72,21 @@ def face_enroll(request):
             return render(request, 'users/face_enroll.html')
 
         try:
-            photos_to_enroll = {
-                'front.png': photo_front_data,
-                'left.png': photo_left_data,
-                'right.png': photo_right_data
-            }
-
-            # --- THIS IS THE FIX ---
+            photos_to_enroll = {'front.png': photo_front_data, 'left.png': photo_left_data, 'right.png': photo_right_data}
             headers = {"X-API-Key": settings.FACE_API_KEY}
-            # --- END FIX ---
-
             for filename, data_url in photos_to_enroll.items():
                 format, imgstr = data_url.split(';base64,')
                 ext = format.split('/')[-1]
                 image_file = ContentFile(base64.b64decode(imgstr), name=filename)
-
                 files = {'file': (image_file.name, image_file.read(), f'image/{ext}')}
                 enroll_url = f"{settings.FACE_SERVICE_URL}/enroll/{request.user.id}"
-                
-                # --- THIS IS THE FIX ---
-                # Add the headers=headers part to the request
                 response = requests.post(enroll_url, files=files, headers=headers)
                 response.raise_for_status()
 
             request.user.is_face_enrolled = True
             request.user.save()
-
             messages.success(request, 'Face enrollment successful! You can now request access.')
             return redirect('site_list')
-
         except requests.exceptions.RequestException:
             messages.error(request, 'Error: Could not connect to the verification service.')
             return render(request, 'users/face_enroll.html')
@@ -103,7 +94,7 @@ def face_enroll(request):
             messages.error(request, f'An unknown error occurred: {e}')
             return render(request, 'users/face_enroll.html')
             
-    return render(request, 'users/face_enroll.html')
+    return render(request, 'users/face_enroll.html', {'camera_disabled': False})
 
 @login_required
 def search_users(request):
@@ -125,22 +116,19 @@ def user_settings(request):
     if request.method == 'POST':
         form = UserProfileUpdateForm(request.POST, request.FILES, instance=request.user)
         if form.is_valid():
+            changed_fields = [field for field in form.changed_data]
+            if changed_fields:
+                action_description = f"Updated profile fields: {', '.join(changed_fields)}."
+                UserChangeLog.objects.create(user=request.user, changed_by=request.user, action=action_description)
             form.save()
             messages.success(request, 'Your profile has been updated successfully.')
             return redirect('user_settings')
     else:
         form = UserProfileUpdateForm(instance=request.user)
-    
-        history = UserChangeLog.objects.filter(user=request.user)
-    
-    # Also get the user's face change request status, if any
+
+    history = UserChangeLog.objects.filter(user=request.user)
     face_request = FaceChangeRequest.objects.filter(user=request.user).first()
-    
-    context = {
-        'form': form,
-        'history': history, # Pass the history to the template
-        'face_request': face_request,
-    }
+    context = {'form': form, 'history': history, 'face_request': face_request}
     return render(request, 'users/settings.html', context)
 
 @login_required
@@ -202,6 +190,13 @@ def deny_face_change(request, request_id):
 
 @login_required
 def re_enroll_face(request):
+    settings_obj = SiteSettings.objects.first()
+    camera_enabled = settings_obj.camera_verification_enabled if settings_obj else True
+
+    if not camera_enabled:
+        messages.warning(request, "Face re-enrollment is temporarily disabled by an administrator.")
+        return render(request, 'users/re_enroll.html', {'camera_disabled': True})
+    
     if request.method == 'POST':
         photo_front_data = request.POST.get('photo_front', '')
         photo_left_data = request.POST.get('photo_left', '')
@@ -212,34 +207,19 @@ def re_enroll_face(request):
             return render(request, 'users/re_enroll.html')
 
         try:
-            # Define the temporary pending directory
             pending_dir = os.path.join(settings.BASE_DIR, 'face_db_pending', str(request.user.id))
-            
-            # Create the directory if it doesn't exist
             os.makedirs(pending_dir, exist_ok=True)
-
-            photos_to_save = {
-                'front.png': photo_front_data,
-                'left.png': photo_left_data,
-                'right.png': photo_right_data
-            }
-
-            # Loop through, decode, and save each photo to the pending directory
+            photos_to_save = {'front.png': photo_front_data, 'left.png': photo_left_data, 'right.png': photo_right_data}
             for filename, data_url in photos_to_save.items():
                 format, imgstr = data_url.split(';base64,')
                 image_data = base64.b64decode(imgstr)
                 with open(os.path.join(pending_dir, filename), 'wb') as f:
                     f.write(image_data)
             
-            # Create or update the request object in the database
-            change_request, created = FaceChangeRequest.objects.update_or_create(
-                user=request.user,
-                defaults={'status': 'Pending'}
-            )
-            
+            FaceChangeRequest.objects.update_or_create(user=request.user, defaults={'status': 'Pending'})
             messages.success(request, 'Your request to change verification photos has been submitted for approval.')
             return redirect('user_settings')
         except Exception as e:
             messages.error(request, f"An error occurred: {e}")
 
-    return render(request, 'users/re_enroll.html')
+    return render(request, 'users/re_enroll.html', {'camera_disabled': False})

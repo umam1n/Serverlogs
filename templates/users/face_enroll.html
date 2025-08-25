@@ -4,8 +4,18 @@
 <div class="bg-white rounded-lg shadow-lg p-8 max-w-4xl mx-auto">
     <div class="text-center">
         <h1 class="text-3xl font-bold text-gray-900">Face Verification</h1>
-        <p id="instructionText" class="mt-2 text-gray-600">Position your face in the frame and follow the instructions.</p>
+        
+        {% if camera_disabled %}
+            <div class="mt-6 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
+                <p class="font-bold">Feature Disabled</p>
+                <p>Face enrollment is currently turned off by the site administrator.</p>
+            </div>
+        {% else %}
+            <p id="instructionText" class="mt-2 text-gray-600">Position your face in the frame and follow the instructions.</p>
+        {% endif %}
     </div>
+
+    {% if not camera_disabled %}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 mt-8">
         <div class="relative w-full aspect-video bg-gray-900 rounded-lg overflow-hidden">
             <video id="cameraFeed" class="w-full h-full object-cover" autoplay playsinline></video>
@@ -30,10 +40,12 @@
         <input type="hidden" name="photo_right" id="photo_right">
     </form>
     <canvas id="canvas" class="hidden"></canvas>
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block scripts %}
+{% if not camera_disabled %}
 <script>
     const video = document.getElementById('cameraFeed');
     const canvas = document.getElementById('canvas');
@@ -73,7 +85,7 @@
             instructionText.textContent = steps[i].instruction;
             await new Promise(resolve => setTimeout(resolve, steps[i].duration));
             captureImage(i);
-            previews[i].classList.add('border-green-500'); // Show success
+            previews[i].classList.add('border-green-500');
         }
 
         instructionText.textContent = "Capture complete! Submitting...";
@@ -82,4 +94,5 @@
 
     window.addEventListener('load', setupCamera);
 </script>
+{% endif %}
 {% endblock %}
