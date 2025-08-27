@@ -37,43 +37,58 @@
                     <td class="py-4 px-6 text-gray-500">{{ log.request_timestamp|date:"d M Y, H:i" }}</td>
                     <td class="py-4 px-6">
                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                            {% if log.status == 'Approved' %}bg-green-100 text-green-800{% elif log.status == 'Pending' %}bg-yellow-100 text-yellow-800{% elif log.status == 'Denied' %}bg-red-100 text-red-800{% elif log.status == 'Checked-In' %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {% if log.status == 'Completed' %}bg-green-100 text-green-800
+                            {% elif log.status == 'Checked-In' %}bg-blue-100 text-blue-800
+                            {% elif log.status == 'Approved' %}bg-teal-100 text-teal-800
+                            {% elif log.status == 'Denied' %}bg-red-100 text-red-800
+                            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
                             {{ log.get_status_display }}
                         </span>
                     </td>
                     <td class="py-4 px-6 space-x-2">
-                        {% if log.status == 'Approved' %}
-                            {% if log.scheduled_for_date == today %}
-                                <a href="{% url 'process_check_in' log.id %}" class="px-3 py-1 bg-blue-500 text-white text-xs font-bold rounded-full hover:bg-blue-600">Check In</a>
-                            {% else %}
-                                <span class="px-2 text-xs text-gray-500">Scheduled for {{ log.scheduled_for_date|date:"d M Y" }}</span>
-                            {% endif %}
+                        {% if log.status == 'Approved' and log.scheduled_for_date == today %}
+                            <a href="{% url 'process_check_in' log.id %}" class="px-3 py-1 bg-blue-500 text-white text-xs font-bold rounded-full hover:bg-blue-600">Check In</a>
                         {% elif log.status == 'Checked-In' %}
                             <a href="{% url 'process_check_out' log.id %}" class="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full hover:bg-red-600">Check Out</a>
                         {% endif %}
                         <button type="button" data-target="detail-row-{{ log.id }}" class="text-blue-600 hover:underline text-sm detail-toggle">Detail</button>
                     </td>
                 </tr>
-                <!-- Hidden Detail Row -->
                 <tr id="detail-row-{{ log.id }}" class="detail-row bg-gray-50">
                     <td colspan="4" class="p-4">
                         <div class="p-4 bg-white rounded-md border space-y-3">
-                            <h4 class="font-bold">Purpose:</h4>
-                            <p class="pl-2 text-gray-700">{{ log.notes }}</p>
-                            <h4 class="font-bold">Detailed Activities:</h4>
-                            <ul class="list-disc list-inside pl-2 text-gray-700">
-                                {% if log.detailed_activities %}{% for activity in log.detailed_activities %}<li>{{ activity }}</li>{% endfor %}{% else %}<li>-</li>{% endif %}
-                            </ul>
-                            <h4 class="font-bold">Group Members:</h4>
-                            <p class="pl-2 text-gray-700">{{ log.group_members|linebreaksbr|default:"None" }}</p>
-                            <h4 class="font-bold">Activity Report:</h4>
-                            <p class="pl-2 text-gray-700">{{ log.activity_report|default:"No report submitted." }}</p>
+                            <div>
+                                <h4 class="font-bold">Timestamps:</h4>
+                                <p class="pl-2 text-gray-700"><strong>Time In:</strong> {{ log.entry_timestamp|date:"d M Y, H:i"|default:"-" }}</p>
+                                <p class="pl-2 text-gray-700"><strong>Time Out:</strong> {{ log.exit_timestamp|date:"d M Y, H:i"|default:"-" }}</p>
+                            </div>
+                            <div class="pt-2 border-t">
+                                <h4 class="font-bold">Purpose:</h4>
+                                <p class="pl-2 text-gray-700">{{ log.notes }}</p>
+                            </div>
+
+                            <div class="pt-2 border-t">
+                                <h4 class="font-bold">Detailed Activities:</h4>
+                                <ul class="list-disc list-inside pl-2 text-gray-700">
+                                    {% if log.detailed_activities %}{% for activity in log.detailed_activities %}<li>{{ activity }}</li>{% endfor %}{% else %}<li>-</li>{% endif %}
+                                </ul>
+                            </div>
+
+                            <div class="pt-2 border-t">
+                                <h4 class="font-bold">Group Members:</h4>
+                                <p class="pl-2 text-gray-700">{{ log.group_members|linebreaksbr|default:"None" }}</p>
+                            </div>
+
+                            <div class="pt-2 border-t">
+                                <h4 class="font-bold">Activity Report:</h4>
+                                <p class="pl-2 text-gray-700">{{ log.activity_report|default:"No report submitted." }}</p>
+                            </div>
                         </div>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="4" class="text-center py-4 text-gray-500">You have not made any requests.</td>
+                    <td colspan="4" class="text-center py-4 text-gray-500">You have not made any any requests.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -89,7 +104,10 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', function() {
             const targetId = this.getAttribute('data-target');
             const detailRow = document.getElementById(targetId);
+            const isVisible = detailRow.classList.contains('show');
+            
             detailRow.classList.toggle('show');
+            this.textContent = isVisible ? 'Detail' : 'Hide';
         });
     });
 });

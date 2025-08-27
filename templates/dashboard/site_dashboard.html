@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-8">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-800">Site Monitoring: {{ site.name }}</h1>
+        <p class="text-gray-500 mt-1">Live operational data for your managed location.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white p-6 rounded-lg shadow-md text-center">
+            <h3 class="text-gray-500 font-semibold">Days Since Last Visit</h3>
+            <p class="text-4xl font-bold mt-2">{{ days_since_last_access }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md text-center">
+            <h3 class="text-gray-500 font-semibold">Average Visit Duration</h3>
+            <p class="text-4xl font-bold mt-2">{% if average_duration %}{{ average_duration|floatformat:"0" }}{% else %}N/A{% endif %}</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md text-center">
+            <h3 class="text-gray-500 font-semibold">Most Frequent Visitor</h3>
+            <p class="text-3xl font-bold mt-2">
+                {% if top_visitor %}
+                    {{ top_visitor.user__first_name }} {{ top_visitor.user__last_name }}
+                    <span class="text-sm font-normal text-gray-500">({{ top_visitor.visit_count }} visits)</span>
+                {% else %}
+                    N/A
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div class="lg:col-span-3 bg-white p-6 rounded-lg shadow-md">
+            <h3 class="font-semibold text-lg text-gray-800 mb-4">Site Visits (Last 30 Days)</h3>
+            <canvas id="visitsChart"></canvas>
+        </div>
+        <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+            <h3 class="font-semibold text-lg text-gray-800 mb-4">Top 5 Activities</h3>
+            <canvas id="activitiesChart"></canvas>
+        </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <h3 class="font-semibold text-lg text-gray-800 mb-4">Full Activity Log for {{ site.name }}</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="py-3 px-6 text-left">User</th>
+                        <th class="py-3 px-6 text-left">Status</th>
+                        <th class="py-3 px-6 text-left">Date</th>
+                        <th class="py-3 px-6 text-left">Purpose</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for log in page_obj.object_list %}
+                    <tr>
+                        <td class="py-4 px-6 font-medium">{{ log.user.get_full_name }}</td>
+                        <td class="py-4 px-6">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                {% if log.status == 'Completed' %} bg-green-100 text-green-800
+                                {% elif log.status == 'Checked-In' %} bg-blue-100 text-blue-800
+                                {% else %} bg-gray-100 text-gray-800 {% endif %}">
+                                {{ log.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="py-4 px-6 text-sm text-gray-500">{{ log.request_timestamp|date:"d M Y, H:i" }}</td>
+                        <td class="py-4 px-6 text-sm text-gray-700 truncate">{{ log.notes }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center py-4 text-gray-500">No logs found for this site.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-4 flex items-center justify-between">
+            <span class="text-sm text-gray-700">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+            </span>
+            <div class="flex items-center space-x-2">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1" class="px-3 py-1 border rounded-md text-sm hover:bg-gray-100">&laquo; First</a>
+                    <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1 border rounded-md text-sm hover:bg-gray-100">Previous</a>
+                {% endif %}
+                <span class="px-3 py-1 text-sm font-semibold">Page {{ page_obj.number }}</span>
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1 border rounded-md text-sm hover:bg-gray-100">Next</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}" class="px-3 py-1 border rounded-md text-sm hover:bg-gray-100">Last &raquo;</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

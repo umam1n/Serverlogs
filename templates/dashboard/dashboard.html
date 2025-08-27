@@ -9,39 +9,42 @@
 
 {% block content %}
 <div class="space-y-8">
-    <div>
-        <h1 class="text-3xl font-bold text-gray-800">Analytics Dashboard</h1>
-        <p class="text-gray-500 mt-1">Real-time insights into server room access.</p>
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Analytics Dashboard</h1>
+            <p class="text-gray-500 mt-1">Real-time insights into server room access.</p>
+        </div>
+        <div class="mt-4 md:mt-0">
+            <a href="#" id="export-link" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-md">
+                Export to CSV
+            </a>
+        </div>
     </div>
 
     <div class="bg-white p-4 rounded-lg shadow-md">
-        <form method="get" id="filter-form" class="grid grid-cols-1 md:grid-cols-7 gap-4 items-end">
-            <div class="md:col-span-2">
+        <form method="get" id="filter-form" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 items-end">
+            <div class="lg:col-span-2">
                 <label for="user_search" class="block text-sm font-medium text-gray-700">Search by User</label>
-                <input type="text" name="user_search" id="user_search" value="{{ user_search }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" placeholder="Enter name or username...">
+                <input type="text" name="user_search" id="user_search" value="{{ user_search }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" placeholder="Enter name...">
             </div>
             <div>
-                <label for="site" class="block text-sm font-medium text-gray-700">Filter by Site</label>
+                <label for="site" class="block text-sm font-medium text-gray-700">Site</label>
                 <select name="site" id="site" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                    <option value="">All Sites</option>
-                    {% for site in all_sites %}
-                        <option value="{{ site.id }}" {% if site.id|stringformat:"s" == site_filter %}selected{% endif %}>{{ site.name }}</option>
-                    {% endfor %}
+                    <option value="">All</option>
+                    {% for site in all_sites %}<option value="{{ site.id }}" {% if site.id|stringformat:"s" == site_filter %}selected{% endif %}>{{ site.name }}</option>{% endfor %}
                 </select>
             </div>
             <div>
-                <label for="category" class="block text-sm font-medium text-gray-700">Filter by Category</label>
+                <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
                 <select name="category" id="category" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                    <option value="">All Categories</option>
-                    {% for cat in all_categories %}
-                        <option value="{{ cat.id }}" {% if cat.id|stringformat:"s" == category_filter %}selected{% endif %}>{{ cat.name }}</option>
-                    {% endfor %}
+                    <option value="">All</option>
+                    {% for cat in all_categories %}<option value="{{ cat.id }}" {% if cat.id|stringformat:"s" == category_filter %}selected{% endif %}>{{ cat.name }}</option>{% endfor %}
                 </select>
             </div>
             <div>
-                <label for="status" class="block text-sm font-medium text-gray-700">Filter by Status</label>
+                <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
                 <select name="status" id="status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                    <option value="">All Statuses</option>
+                    <option value="">All</option>
                     <option value="Checked-In" {% if status_filter == 'Checked-In' %}selected{% endif %}>Inside Now</option>
                     <option value="Completed" {% if status_filter == 'Completed' %}selected{% endif %}>Completed</option>
                     <option value="Approved" {% if status_filter == 'Approved' %}selected{% endif %}>Approved</option>
@@ -50,7 +53,7 @@
                 </select>
             </div>
             <div>
-                <label for="time_filter" class="block text-sm font-medium text-gray-700">Filter by Time</label>
+                <label for="time_filter" class="block text-sm font-medium text-gray-700">Time</label>
                 <select name="time_filter" id="time_filter" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                     <option value="all" {% if time_filter == 'all' %}selected{% endif %}>All Time</option>
                     <option value="month" {% if time_filter == 'month' %}selected{% endif %}>Last 30 Days</option>
@@ -58,7 +61,15 @@
                     <option value="day" {% if time_filter == 'day' %}selected{% endif %}>Last 24 Hours</option>
                 </select>
             </div>
-            <button type="submit" class="w-full md:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md">Apply Filters</button>
+            <div>
+                <label for="per_page" class="block text-sm font-medium text-gray-700">Show</label>
+                <select name="per_page" id="per_page" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    <option value="20" {% if per_page == '20' %}selected{% endif %}>20 rows</option>
+                    <option value="50" {% if per_page == '50' %}selected{% endif %}>50 rows</option>
+                    <option value="100" {% if per_page == '100' %}selected{% endif %}>100 rows</option>
+                </select>
+            </div>
+            <button type="submit" class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md">Apply</button>
         </form>
     </div>
 
@@ -94,7 +105,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
-                    {% for log in all_logs %}
+                    {% for log in page_obj.object_list %}
                     <tr id="log-row-{{ log.id }}">
                         <td class="py-4 px-6">{{ log.user.get_full_name }}</td>
                         <td class="py-4 px-6">{{ log.location.name }}</td>
@@ -118,35 +129,35 @@
                     <tr id="details-{{ log.id }}" class="hidden bg-gray-50">
                         <td colspan="5" class="p-4">
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-                            <div class="md:col-span-1">
-                                {% if log.entry_photo %}
-                                    <h4 class="font-bold text-gray-700 mb-2">Entry Photo:</h4>
-                                    <img src="{{ log.entry_photo.url }}" alt="Check-in photo for {{ log.user.get_full_name }}" class="rounded-lg shadow-md w-full max-w-xs">
+                                <div class="md:col-span-1">
+                                    {% if log.entry_photo %}
+                                        <h4 class="font-bold text-gray-700 mb-2">Entry Photo:</h4>
+                                        <img src="{{ log.entry_photo.url }}" alt="Check-in photo for {{ log.user.get_full_name }}" class="rounded-lg shadow-md w-full max-w-xs">
+                                    {% endif %}
+                                </div>
+                                <div class="md:col-span-2 space-y-4">
+                                    <div>
+                                        <h4 class="font-bold text-gray-700">Timestamps:</h4>
+                                        <p><strong>Check-In:</strong> {{ log.entry_timestamp|date:"d M Y, H:i"|default:"N/A" }}</p>
+                                        <p><strong>Check-Out:</strong> {{ log.exit_timestamp|date:"d M Y, H:i"|default:"N/A" }}</p>
+                                        <p><strong>Approved by:</strong> {{ log.approved_by.get_full_name|default:"N/A" }}</p>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-700">Activities & Outcome:</h4>
+                                        <p><strong>Purpose:</strong> {{ log.notes }}</p>
+                                        {% if log.detailed_activities %}
+                                            <p><strong>Selected Activities:</strong> {{ log.detailed_activities|join:", " }}</p>
+                                        {% endif %}
+                                        <p><strong>Outcome:</strong> {{ log.get_outcome_display|default:"N/A" }}</p>
+                                    </div>
+                                </div>
+                                {% if log.activity_report %}
+                                <div class="md:col-span-3 mt-4">
+                                    <h4 class="font-bold text-gray-700">Activity Report:</h4>
+                                    <p class="whitespace-pre-wrap p-2 bg-white border rounded-md">{{ log.activity_report }}</p>
+                                </div>
                                 {% endif %}
                             </div>
-                            <div class="md:col-span-2 space-y-4">
-                                <div>
-                                    <h4 class="font-bold text-gray-700">Timestamps:</h4>
-                                    <p><strong>Check-In:</strong> {{ log.entry_timestamp|date:"d M Y, H:i"|default:"N/A" }}</p>
-                                    <p><strong>Check-Out:</strong> {{ log.exit_timestamp|date:"d M Y, H:i"|default:"N/A" }}</p>
-                                    <p><strong>Approved by:</strong> {{ log.approved_by.get_full_name|default:"N/A" }}</p>
-                                </div>
-                                <div>
-                                    <h4 class="font-bold text-gray-700">Activities & Outcome:</h4>
-                                    <p><strong>Purpose:</strong> {{ log.notes }}</p>
-                                    {% if log.detailed_activities %}
-                                        <p><strong>Selected Activities:</strong> {{ log.detailed_activities|join:", " }}</p>
-                                    {% endif %}
-                                    <p><strong>Outcome:</strong> {{ log.get_outcome_display|default:"N/A" }}</p>
-                                </div>
-                            </div>
-                            {% if log.activity_report %}
-                            <div class="md:col-span-3 mt-4">
-                                <h4 class="font-bold text-gray-700">Activity Report:</h4>
-                                <p class="whitespace-pre-wrap p-2 bg-white border rounded-md">{{ log.activity_report }}</p>
-                            </div>
-                            {% endif %}
-                        </div>
                         </td>
                     </tr>
                     {% empty %}
@@ -155,6 +166,23 @@
                 </tbody>
             </table>
         </div>
+        
+        <div class="mt-4 flex items-center justify-between">
+            <span class="text-sm text-gray-700">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}. ({{ all_logs_count }} total logs)
+            </span>
+            <div class="flex items-center space-x-2">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1&{{ request.GET.urlencode|cut:'page=' }}" class="px-3 py-1 border rounded-md text-sm hover:bg-gray-100">&laquo; First</a>
+                    <a href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode|cut:'page=' }}" class="px-3 py-1 border rounded-md text-sm hover:bg-gray-100">Previous</a>
+                {% endif %}
+                <span class="px-3 py-1 text-sm font-semibold">Page {{ page_obj.number }}</span>
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode|cut:'page=' }}" class="px-3 py-1 border rounded-md text-sm hover:bg-gray-100">Next</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}&{{ request.GET.urlencode|cut:'page=' }}" class="px-3 py-1 border rounded-md text-sm hover:bg-gray-100">Last &raquo;</a>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -162,14 +190,12 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 {{ visits_by_site_data|json_script:"site-data" }}
 {{ visits_by_category_data|json_script:"category-data" }}
 {{ sites_json|json_script:"sites-for-map" }}
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // ... (Map and Chart initialization code remains the same) ...
         const siteData = JSON.parse(document.getElementById('site-data').textContent);
         const sitesForMap = JSON.parse(document.getElementById('sites-for-map').textContent);
         
@@ -177,10 +203,8 @@
         if (sitesForMap.length > 0 && sitesForMap[0].lat && sitesForMap[0].lon) {
             mapCenter = [sitesForMap[0].lat, sitesForMap[0].lon];
         }
-
         const map = L.map('map').setView(mapCenter, 12);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
-
         sitesForMap.forEach(site => {
             if (site.lat && site.lon) {
                 L.marker([site.lat, site.lon]).addTo(map).bindPopup(`<b>${site.name}</b>`);
@@ -210,13 +234,23 @@
             button.addEventListener('click', () => {
                 const targetId = button.dataset.target;
                 const targetRow = document.getElementById(targetId);
-                
                 if (targetRow) {
                     const isHidden = targetRow.classList.contains('hidden');
                     targetRow.classList.toggle('hidden');
                     button.textContent = isHidden ? 'Hide' : 'Details';
                 }
             });
+        });
+
+        const exportLink = document.getElementById('export-link');
+        const filterForm = document.getElementById('filter-form');
+        exportLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            const formData = new FormData(filterForm);
+            const params = new URLSearchParams(formData);
+            params.delete('page'); 
+            params.delete('per_page');
+            window.location.href = `{% url 'export_logs_csv' %}?${params.toString()}`;
         });
     });
 </script>
